@@ -1,0 +1,1500 @@
+contributed articles 
+
+doi 10 1145 1646353 1646374 
+
+how coverity built a bug finding tool  and 
+a business  around the unlimited supply 
+of bugs in software systems  
+
+by al bessey  ken block  ben chelf  andy chou  
+bryan fulton  seth hallem  charles henri gros  
+asya kamsky  scott mcpeak  and dawson engler 
+
+a few billion 
+lines of 
+code later 
+
+using static analysis 
+to find bugs in 
+the real world 
+
+in 2002  coverity commercialized3 a research static 
+bug finding tool 6 9 not surprisingly  as academics  
+our view of commercial realities was not perfectly 
+accurate  however  the problems we encountered 
+were not the obvious ones  discussions with tool 
+researchers and system builders suggest we were 
+not alone in our naïveté  here  we document some 
+of the more important examples of what we learned 
+developing and commercializing an industrialstrength 
+bug finding tool  
+
+we built our tool to find generic errors  such as 
+memory corruption and data races  and systemspecific 
+or interface specific violations  such as 
+violations of function ordering constraints   the tool  
+
+like all static bug finders  leveraged 
+the fact that programming rules often 
+map clearly to source code  thus static 
+inspection can find many of their violations  
+for example  to check the rule 
+ acquired locks must be released   a 
+checker would look for relevant operations 
+ such as lock   and unlock    
+and inspect the code path after flagging 
+rule disobedience  such as lock  with 
+no unlock   and double locking   
+
+for those who keep track of such 
+things  checkers in the research system 
+typically traverse program paths  flow 
+sensitive  in a forward direction  going 
+across function calls  inter procedural  
+while keeping track of call site specific 
+information  context sensitive  and 
+toward the end of the effort had some 
+of the support needed to detect when a 
+path was infeasible  path sensitive   
+
+a glance through the literature reveals 
+many ways to go about static bug 
+
+finding 1 2 4 7 8 11
+
+ for us  the central religion 
+was results  if it worked  it was 
+good  and if not  not  the ideal  check 
+millions of lines of code with little 
+manual setup and find the maximum 
+number of serious true errors with the 
+minimum number of false reports  as 
+much as possible  we avoided using annotations 
+or specifications to reduce 
+manual labor  
+
+like the prefix product 2 we were 
+also unsound  our product did not verify 
+the absence of errors but rather tried 
+to find as many of them as possible  un 
+soundness let us focus on handling the 
+easiest cases first  scaling up as it proved 
+useful  we could ignore code constructs 
+that led to high rates of false error messages 
+ false positives  or analysis complexity  
+in the extreme skipping problematic 
+code entirely  such as assembly 
+statements  functions  or even entire 
+files   circa 2000  unsoundness was 
+controversial in the research community  
+though it has since become almost a 
+de facto tool bias for commercial products 
+and many research projects  
+
+initially  publishing was the main 
+force driving tool development  we 
+would generally devise a set of checkers 
+or analysis tricks  run them over a few 
+
+66 communications of the acm | february 2010 | vol  53 | no  2 
+
+
+ codeprofiles  by w  bradford paley  http   didi com 
+
+million lines of code  typically linux   
+count the bugs  and write everything 
+up  like other early static tool research 
+ers  we benefited from what seems an 
+empirical law  assuming you have a reasonable 
+tool  if you run it over a large  
+previously unchecked system  you 
+will always find bugs  if you do not  the 
+immediate knee jerk reaction is that 
+something must be wrong  misconfigu 
+ration  mistake with macros  wrong 
+compilation target  if programmers 
+must obey a rule hundreds of times  
+then without an automatic safety net 
+they cannot avoid mistakes  thus  even 
+our initial effort with primitive analysis 
+found hundreds of errors  
+
+this is the research context  we now 
+describe the commercial context  our 
+rough view of the technical challenges of 
+commercialization was that given that 
+the tool would regularly handle  large 
+amounts  of  real  code  we needed 
+only a pretty box  the rest was a business 
+issue  this view was naïve  while we in 
+clude many examples of unexpected obstacles 
+here  they devolve mainly from 
+consequences of two main dynamics  
+
+first  in the research lab a few people 
+check a few code bases  in reality 
+many check many  the problems that 
+show up when thousands of program 
+mers use a tool to check hundreds  or 
+even thousands  of code bases do not 
+show up when you and your co authors 
+check only a few  the result of summing 
+many independent random variables  
+a gaussian distribution  most 
+of it not on the points you saw and 
+adapted to in the lab  furthermore  
+gaussian distributions have tails  as 
+the number of samples grows  so  too  
+does the absolute number of points 
+several standard deviations from the 
+mean  the unusual starts to occur with 
+increasing frequency  
+
+w  bradford paley’s codeprofiles was 
+originally commissioned for the whitney 
+museum of american art’s  codedoc  
+exhibition and later included in moma’s 
+ design and the elastic mind  exhibition  
+codeprofiles explores the space of code 
+itself  the program reads its source into 
+memory  traces three points as they once 
+moved through that space  then prints itself 
+on the page  
+
+68 communications of the acm | february 2010 | vol  53 | no  2 
+contributed articles 
+for code  these features include 
+problematic idioms  the types of false 
+positives encountered  the distance 
+of a dialect from a language standard  
+and the way the build works  for developers  
+variations appear in raw ability  
+knowledge  the amount they care 
+about bugs  false positives  and the 
+types of both  a given company will not 
+deviate in all these features but  given 
+the number of features to choose from  
+often includes at least one weird oddity  
+weird is not good  tools want expected  
+expected you can tune a tool to 
+handle  surprise interacts badly with 
+tuning assumptions  
+second  in the lab the user’s values  
+knowledge  and incentives are those 
+such champions make sales as easily as 
+their antithesis blocks them  however  
+since their main requirements tend to 
+be technical  the tool must work  the 
+reader likely sees how to make them 
+happy  so we rarely discuss them here  
+most of our lessons come from two 
+different styles of use  the initial trial of 
+the tool and how the company uses the 
+tool after buying it  the trial is a pre sale 
+demonstration that attempts to show 
+that the tool works well on a potential 
+customer’s code  we generally ship a 
+salesperson and an engineer to the customer’s 
+site  the engineer configures 
+the tool and runs it over a given code 
+base and presents results soon after  initially  
+the checking run would happen 
+of the tool builder  since the user and 
+the builder are the same person  deployment 
+leads to severe fission  users 
+often have little understanding of 
+the tool and little interest in helping 
+develop it  for reasons ranging from 
+simple skepticism to perverse reward 
+incentives  and typically label any error 
+message they find confusing as false  a 
+tool that works well under these constraints 
+looks very different from one 
+tool builders design for themselves  
+however  for every user who lacks 
+the understanding or motivation one 
+might hope for  another is eager to understand 
+how it all works  or perhaps already 
+does   willing to help even beyond 
+what one might consider reasonable  
+
+contributed articles 
+
+in the morning  and the results meeting 
+would follow in the afternoon  as code 
+size at trials grows it’s not uncommon 
+to split them across two  or more  days  
+
+sending people to a trial dramatically 
+raises the incremental cost of each 
+sale  however  it gives the non trivial 
+benefit of letting us educate customers 
+ so they do not label serious  true bugs 
+
+
+as false positives  and do real time  ad 
+hoc workarounds of weird customer 
+system setups  
+
+the trial structure is a harsh test for 
+any tool  and there is little time  the 
+checked system is large  millions of 
+lines of code  with 20–30mloc a possibility   
+the code and its build system 
+are both difficult to understand  how
+
+
+ever  the tool must routinely go from 
+never seeing the system previously to 
+getting good bugs in a few hours  since 
+we present results almost immediately 
+after the checking run  the bugs must 
+be good with few false positives  there 
+is no time to cherry pick them  
+
+furthermore  the error messages 
+must be clear enough that the sales en 
+gineer  who did not build the checked 
+system or the tool  can diagnose and 
+explain them in real time in response 
+to  what about this one   questions  
+
+the most common usage model for 
+the product has companies run it as 
+part of their nightly build  thus  most 
+require that checking runs complete in 
+12 hours  though those with larger code 
+bases  10+mloc  grudgingly accept 
+24 hours  a tool that cannot analyze 
+at least 1 400 lines of code per minute 
+makes it difficult to meet these targets  
+during a checking run  error messages 
+are put in a database for subsequent 
+triaging  where users label them as 
+true errors or false positives  we spend 
+significant effort designing the system 
+so these labels are automatically reapplied 
+if the error message they refer to 
+comes up on subsequent runs  despite 
+code dilating edits or analysis changing 
+bug fixes to checkers  
+
+as of this writing  december 2009   
+approximately 700 customers have 
+licensed the coverity static analysis 
+product  with somewhat more than a 
+billion lines of code among them  we 
+estimate that since its creation the tool 
+has analyzed several billion lines of 
+code  some more difficult than others  
+
+caveats  drawing lessons from a single 
+data point has obvious problems  
+our product’s requirements roughly 
+form a  least common denominator  
+set needed by any tool that uses non 
+trivial analysis to check large amounts 
+of code across many organizations  the 
+tool must find and parse the code  and 
+users must be able to understand error 
+messages  further  there are many 
+ways to handle the problems we have 
+encountered  and our way may not be 
+the best one  we discuss our methods 
+more for specificity than as a claim of 
+solution  
+
+finally  while we have had success 
+as a static tools company  these are 
+small steps  we are tiny compared to 
+mature technology companies  here  
+too  we have tried to limit our discus
+
+
+sion to conditions likely to be true in a 
+larger setting  
+
+laws of bug finding 
+
+the fundamental law of bug finding 
+is no check = no bug  if the tool cannot 
+check a system  file  code path  or given 
+property  then it will not find bugs in it  
+assuming a reasonable tool  the first 
+order bound on bug counts is just how 
+much code can be shoved through the 
+tool  ten times more code is 10 times 
+more bugs  
+
+we imagined this law was as simple 
+a statement of fact as we needed  un 
+fortunately  two seemingly vacuous cor 
+ollaries place harsh first order bounds 
+on bug counts  
+
+law  you cannot check code you do not 
+see  it seems too trite to note that checking 
+code requires first finding it    until 
+you try to do so consistently on many 
+large code bases  probably the most reliable 
+way to check a system is to grab its 
+code during the build process  the build 
+system knows exactly which files are in 
+cluded in the system and how to compile 
+them  this seems like a simple task  
+unfortunately  it’s often difficult to un 
+derstand what an ad hoc  homegrown 
+build system is doing well enough to ex 
+tract this information  a difficulty compounded 
+by the near universal absolute 
+edict   no  you cannot touch that   by de 
+fault  companies refuse to let an external 
+force modify anything  you cannot 
+modify their compiler path  their broken 
+makefiles  if they have any   or in any 
+way write or reconfigure anything other 
+than your own temporary files  which is 
+fine  since if you need to modify it  you 
+most likely will not understand it  
+
+further  for isolation  companies 
+often insist on setting up a test machine 
+for you to use  as a result  not 
+infrequently the build you are given to 
+check does not work in the first place  
+which you would get blamed for if you 
+had touched anything  
+
+our approach in the initial months 
+of commercialization in 2002 was a 
+low tech  read only replay of the build 
+commands  run make  record its output 
+in a file  and rewrite the invocations 
+to their compiler  such as gcc  
+to instead call our checking tool  then 
+rerun everything  easy and simple  
+this approach worked perfectly in the 
+lab and for a small number of our earliest 
+customers  we then had the fol
+
+
+ codeprofiles  by w  bradford paley 
+
+february 2010 | vol  53 | no  2 | communications of the acm 69 
+
+
+contributed articles 
+
+lowing conversation with a potential 
+
+customer  
+ how do we run your tool   
+ just type ‘make’ and we will rewrite 
+
+its output   
+ what’s ‘make’  we use clearcase   
+ uh  what’s clearcase   
+this turned out to be a chasm we 
+
+could not cross   strictly speaking  the 
+customer used ‘clearmake ’ but the 
+superficial similarities in name are en 
+tirely unhelpful at the technical level   
+we skipped that company and went 
+to a few others  they exposed other 
+problems with our method  which we 
+papered over with 90% hacks  none 
+seemed so troublesome as to force us 
+to rethink the approach—at least until 
+we got the following support call from 
+a large customer  
+
+ why is it when i run your tool  i 
+
+have to reinstall my linux distribution 
+
+from cd   
+
+this was indeed a puzzling question  
+some poking around exposed the 
+following chain of events  the company’s 
+makeused a novel format to print 
+out the absolute path of the directory 
+in which the compiler ran  our script 
+misparsed this path  producing the 
+empty string that we gave as the destination 
+to the unix  cd   change direc 
+tory  command  causing it to change 
+to the top level of the system  it ran 
+ rm  rf *   recursive delete  during 
+compilation to clean up temporary 
+files  and the build process ran as root  
+summing these points produces the 
+removal of all files on the system  
+
+the right approach  which we have 
+used for the past seven years  kicks off 
+the build process and intercepts every 
+system call it invokes  as a result  we can 
+see everything needed for checking  in 
+cluding the exact executables invoked  
+their command lines  the directory 
+they run in  and the version of the compiler 
+ needed for compiler bug workarounds   
+this control makes it easy to 
+grab and precisely check all source code  
+to the extent of automatically changing 
+the language dialect on a per file basis  
+
+to invoke our tool users need only 
+
+call it with their build command as an 
+
+argument  
+
+cov build  build command  
+
+we thought this approach was bulletproof  
+unfortunately  as the astute read 
+
+a misunderstood 
+explanation 
+means the error is 
+ignored or  worse  
+transmuted into 
+a false positive  
+
+er has noted  it requires a command 
+prompt  soon after implementing it we 
+went to a large company  so large it had 
+a hyperspecialized build engineer  who 
+engaged in the following dialogue  
+
+ how do i run your tool   
+
+ oh  it’s easy  just type ‘cov build’ 
+before your build command   
+
+ build command  i just push this 
+ gui  button     
+
+social vs  technical  the social restriction 
+that you cannot change anything  
+no matter how broken it may be  forces 
+ugly workarounds  a representative ex 
+ample is  build interposition on windows 
+requires running the compiler in 
+the debugger  unfortunately  doing so 
+causes a very popular windows c++ compiler—
+visual studio c++  net 2003—to 
+prematurely exit with a bizarre error 
+message  after some high stress fussing  
+it turns out that the compiler has a 
+use after free bug  hit when code used a 
+microsoft specific c language extension 
+ certain invocations of its #using directive   
+the compiler runs fine in normal 
+use  when it reads the freed memory  
+the original contents are still there  so 
+everything works  however  when run 
+with the debugger  the compiler switch 
+es to using a  debug malloc   which on 
+each free call sets the freed memory 
+contents to a garbage value  the subsequent 
+read returns this value  and the 
+compiler blows up with a fatal error  
+the sufficiently perverse reader can no 
+doubt guess the  solution  a 
+
+law  you ca not check code you cannot 
+parse  checking code deeply requires 
+understanding the code’s semantics  
+the most basic requirement is that you 
+parse it  parsing is considered a solved 
+problem  unfortunately  this view is naïve  
+rooted in the widely believed myth 
+that programming languages exist  
+
+the c language does not exist  neither 
+does java  c++  and c#  while a 
+language may exist as an abstract idea  
+and even have a pile of paper  a standard  
+purporting to define it  a standard 
+is not a compiler  what language 
+do people write code in  the character 
+strings accepted by their compiler  
+further  they equate compilation with 
+certification  a file their compiler does 
+
+a immediately after process startup our tool 
+writes 0 to the memory location of the  in de 
+bugger  variable that the compiler checks to 
+decide whether to use the debug malloc  
+
+70 communications of the acm | february 2010 | vol  53 | no  2 
+
+
+contributed articles 
+
+not reject has been certified as  c code  
+no matter how blatantly illegal its contents 
+may be to a language scholar  fed 
+this illegal not c code  a tool’s c front 
+end will reject it  this problem is the 
+tool’s problem  
+
+compounding it  and others  the 
+person responsible for running the 
+tool is often not the one punished if the 
+checked code breaks   this person also 
+often does not understand the checked 
+code or how the tool works   in particular  
+since our tool often runs as part of 
+the nightly build  the build engineer 
+managing this process is often in charge 
+of ensuring the tool runs correctly  
+many build engineers have a single con 
+crete metric of success  that all tools ter 
+minate with successful exit codes  they 
+see coverity’s tool as just another speed 
+bump in the list of things they must get 
+through  guess how receptive they are 
+to fixing code the  official  compiler ac 
+cepted but the tool rejected with a parse 
+error  this lack of interest generally ex 
+tends to any aspect of the tool for which 
+they are responsible  
+
+many  all   compilers diverge from 
+the standard  compilers have bugs  or 
+are very old  written by people who mis 
+understand the specification  not just 
+for c++   or have numerous extensions  
+the mere presence of these divergences 
+causes the code they allow to appear  
+if a compiler accepts construct x  then 
+given enough programmers and code  
+eventually x is typed  not rejected  then 
+encased in the code base  where the 
+static tool will  not helpfully  flag it as a 
+parse error  
+
+the tool cannot simply ignore divergent 
+code  since significant markets 
+are awash in it  for example  one enor 
+mous software company once viewed 
+conformance as a competitive disadvantage  
+since it would let others make 
+tools usable in lieu of its own  embedded 
+software companies make great 
+tool customers  given the bug aversion 
+of their customers  users do not like it if 
+their cars  or even their toasters  crash  
+unfortunately  the space constraints in 
+such systems and their tight coupling 
+to hardware have led to an astonishing 
+oeuvre of enthusiastically used compiler 
+extensions  
+
+finally  in safety critical software 
+systems  changing the compiler often 
+requires costly re certification  thus  
+we routinely see the use of decades
+
+
+old compilers  while the languages 
+these compilers accept have interesting 
+features  strong concordance with 
+a modern language standard is not one 
+of them  age begets new problems  
+realistically  diagnosing a compiler’s 
+divergences requires having a copy of 
+the compiler  how do you purchase a 
+license for a compiler 20 versions old  
+or whose company has gone out of 
+business  not through normal channels  
+we have literally resorted to buying 
+copies off ebay  
+
+this dynamic shows up in a softer 
+way with non safety critical systems  the 
+larger the code base  the more the sales 
+force is rewarded for a sale  skewing sales 
+toward such systems  large code bases 
+take a while to build and often get tied to 
+the compiler used when they were born  
+skewing the average age of the compilers 
+whose languages we must accept  
+
+if divergence induced parse errors are 
+isolated events scattered here and there  
+then they do not matter  an unsound tool 
+can skip them  unfortunately  failure often 
+is not modular  in a sad  too common 
+story line  some crucial  purportedly  c  
+header file contains a blatantly illegal 
+non c construct  it gets included by all 
+files  the no longer potential customer 
+is treated to a constant stream of parse 
+errors as your compiler rips through the 
+customer’s source files  rejecting each 
+in turn  the customer’s derisive stance 
+is   deep source code analysis  your 
+tool cannot even compile code  how can 
+it find bugs   it may find this event so 
+amusing that it tells many friends  
+
+tiny set of bad snippets seen in header 
+files  one of the first examples we en 
+countered of illegal construct in keyheader 
+file came up at a large networking 
+company 
+
+    redefinition of parameter ’a’  
+void foo int a  int a   
+
+the programmer names foo’s first 
+formal parameter a and  in a form of 
+lexical locality  the second as well  
+harmless  but any conformant compiler 
+will reject this code  our tool certainly 
+did  this is not helpful  compiling 
+no files means finding no bugs  and 
+people do not need your tool for that  
+and  because its compiler accepted it  
+the potential customer blamed us  
+
+here’s an opposite  less harmless 
+case where the programmer is trying to 
+
+make two different things the same 
+
+typedef char int  
+
+  useless type name in empty decla 
+ration    
+
+and one where readability trumps 
+the language spec 
+
+unsigned x = 0xdead _ beef  
+
+  invalid suffix ‘_beef’ on integer 
+constant    
+
+from the embedded space  creating 
+a label that takes no space 
+void x  
+
+  storage size of ‘x’ is not known    
+
+another embedded example that 
+controls where the space comes from 
+
+unsigned x @  text   
+
+  stray ‘@’ in program    
+
+a more advanced case of a nonstan 
+dard construct is 
+
+int16 errsetjump errjumpbuf buf  
+=   0x4e40 + 15  0xa085    
+
+it treats the hexadecimal values of 
+machine code instructions as program 
+source  
+
+the award for most widely used extension 
+should  perhaps  go to micro 
+soft support for precompiled headers  
+among the most nettlesome troubles 
+is that the compiler skips all the text 
+before an inclusion of a precompiled 
+header  the implication of this behavior 
+is that the following code can be 
+compiled without complaint  
+
+i can put whatever i want here  
+it does not have to compile  
+if your compiler gives an error  
+
+it sucks  
+#include  some precompiled
+
+
+header h  
+
+microsoft’s on the fly header fabrication 
+makes things worse  
+
+assembly is the most consistently 
+troublesome construct  it’s already 
+non portable  so compilers seem to 
+almost deliberately use weird syntax  
+making it difficult to handle in a 
+general way  unfortunately  if a programmer 
+uses assembly it’s probably 
+to write a widely used function  and 
+if the programmer does it  the most 
+likely place to put it is in a widely used 
+
+february 2010 | vol  53 | no  2 | communications of the acm 71 
+
+
+contributed articles 
+
+header file  here are two ways  out 
+of many  to issue a mov instruction 
+
+   first way 
+
+foo     
+_ _ asm mov eax  eab 
+mov eax  eab  
+
+  
+
+   second way 
+#pragma asm 
+_ _ asm   mov eax  eab mov 
+eax  eab   
+#pragma end _ asm 
+
+the only thing shared in addition to 
+
+mov is the lack of common textual keys 
+
+that can be used to elide them  
+
+we have thus far discussed only c  a 
+simple language  c++ compilers diverge 
+to an even worse degree  and we go to 
+great lengths to support them  on the 
+other hand  c# and java have been easier  
+since we analyze the bytecode they 
+compile to rather than their source  
+
+how to parse not c with a c front end  
+
+ok  so programmers use extensions  
+how difficult is it to solve this problem  
+coverity has a full time team of some of 
+its sharpest engineers to firefight this banal  
+technically uninteresting problem 
+as their sole job  they’re never done b 
+
+we first tried to make the problem 
+someone else’s problem by using the 
+edison design group  edg  c c++ 
+front end to parse code 5 edg has 
+worked on how to parse real c code 
+since 1989 and is the de facto indus 
+try standard front end  anyone deciding 
+to not build a homegrown front 
+end will almost certainly license from 
+edg  all those who do build a home 
+grown front end will almost certainly 
+wish they did license edg after a few 
+experiences with real code  edg aims 
+not just for mere feature compatibility 
+but for version specific bug compatibility 
+across a range of compilers  its 
+front end probably resides near the 
+limit of what a profitable company can 
+do in terms of front end gyrations  
+
+unfortunately  the creativity of com
+
+
+piler writers means that despite two de 
+
+cades of work edg still regularly meets 
+
+b anecdotally  the dynamic memory checking 
+tool purify10 had an analogous struggle at the 
+machine code level  where purify’s developers 
+expended significant resources reverse engineering 
+the various activation record layouts 
+used by different compilers  
+
+defeat when trying to parse real world 
+large code bases c thus  our next step is 
+for each supported compiler  we write 
+a set of  transformers  that mangle 
+its personal language into something 
+closer to what edg can parse  the 
+most common transformation simply 
+rips out the offending construct  as 
+one measure of how much c does not 
+exist  the table here counts the lines of 
+transformer code needed to make the 
+languages accepted by 18 widely used 
+compilers look vaguely like c  a line of 
+transformer code was almost always 
+written only when we were burned to a 
+degree that was difficult to work around  
+adding each new compiler to our list of 
+ supported  compilers almost always 
+requires writing some kind of transformer  
+unfortunately  we sometimes 
+need a deeper view of semantics so are 
+forced to hack edg directly  this method 
+is a last resort  still  at last count  as 
+of early 2009  there were more than 
+406    places in the front end where we 
+had an #ifdef coverityto handle a 
+specific  unanticipated construct  
+
+edg is widely used as a compiler 
+front end  one might think that for customers 
+using edg based compilers we 
+would be in great shape  unfortunately  
+this is not necessarily the case  even ignoring 
+the fact that compilers based on 
+edg often modify edg in idiosyncratic 
+ways  there is no single  edg front 
+end  but rather many versions and possible 
+configurations that often accept a 
+slightly different language variant than 
+the  often newer  version we use  as a si 
+syphean twist  assume we cannot work 
+around and report an incompatibility  if 
+edg then considers the problem important 
+enough to fix  it will roll it together 
+with other patches into a new version  
+
+so  to get our own fix  we must up 
+
+c coverity won the dubious honor of being the 
+
+single largest source of edg bug reports after 
+
+only three years of use  
+
+lines of code per transformer for 18 common compilers we support  
+160 qnx 280 hp ux 
+
+294 sun java cpp 384 st cpp 
+
+421 intel cpp 457 sun cpp 
+
+629 bcc cpp 673 diab cpp 
+
+912 arm 914 gnu 
+
+1425 keil cpp 1848 cw cpp 
+
+grade the version we use  often causing 
+divergence from other unupgraded 
+edg compiler front ends  and more issues 
+ensue  
+
+social versus technical  can we get cus 
+tomer source code  almost always  no  
+despite nondisclosure agreements  even 
+for parse errors and preprocessed code  
+though perhaps because we are viewed 
+as too small to sue to recoup damages  
+as a result  our sales engineers must 
+type problems in reports from memory  
+this works as well as you might expect  
+it’s worse for performance problems  
+which often show up only in large code 
+settings  but one should not complain  
+since classified systems make things 
+even worse  can we send someone on 
+site to look at the code  no  you listen to 
+recited syntax on the phone  
+
+bugs 
+
+do bugs matter  companies buy bug 
+finding tools because they see bugs as 
+bad  however  not everyone agrees that 
+bugs matter  the following event has 
+occurred during numerous trials  the 
+tool finds a clear  ugly error  memory 
+corruption or use after free  in important 
+code  and the interaction with the 
+customer goes like thus  
+
+ so   
+
+ is not that bad  what happens if 
+you hit it   
+
+ oh  it’ll crash  we will get a call   
+ shrug   
+
+if developers do not feel pain  they 
+often do not care  indifference can arise 
+from lack of accountability  if qa cannot 
+reproduce a bug  then there is no 
+blame  other times  it’s just odd  
+
+ is this a bug   
+
+ i’m just the security guy   
+
+ that’s not a bug  it’s in third party 
+code   
+
+ a leak  do not know  the author left 
+years ago     
+
+no  your tool is broken  that is not 
+a bug  given enough code  any bug
+
+
+285 picc cpp 
+334 cosmic cpp 
+603 iccmsa cpp 
+756 xlc cpp 
+1294 microsoft 
+1665 metrowerks 
+
+72 communications of the acm | february 2010 | vol  53 | no  2 
+
+
+contributed articles 
+
+finding tool will uncover some weird 
+examples  given enough coders  
+you will see the same thing  the fol 
+lowing utterances were culled from 
+trial meetings  
+
+upon seeing an error report saying 
+the following loop body was dead code 
+
+foo i = 1  i   0  i++  
+    deadcode     
+
+ no  that’s a false positive  a loop ex 
+ecutes at least once   
+
+for this memory corruption error 
+ 32 bit machine  
+
+int a 2   b  
+memset a  0  12   
+
+ no  i meant to do that  they are next 
+to each other   
+
+for this use after free 
+
+free foo   
+foo  bar =      
+
+ no  that’s ok  there is no malloc 
+call between the free and use   
+
+as a final example  a buffer overflow 
+checker flagged a bunch of errors of the 
+form 
+
+unsigned p 4   
+    
+p 4  = 1  
+
+ no  ansi lets you write 1 past the 
+end of the array   
+
+after heated argument  the programmer 
+said   we will have to agree to dis 
+agree   we could agree about the dis 
+agreement  though we could not quite 
+comprehend it  the  subtle   interplay 
+between 0 based offsets and buffer siz 
+es seems to come up every few months  
+
+while programmers are not often 
+so egregiously mistaken  the general 
+trend holds  a not understood bug 
+report is commonly labeled a false 
+positive  rather than spurring the programmer 
+to delve deeper  the result  
+we have completely abandoned some 
+analyses that might generate difficultto 
+understand reports  
+
+how to handle cluelessness  you cannot 
+often argue with people who are 
+sufficiently confused about technical 
+matters  they think you are the one 
+who does not get it  they also tend to get 
+emotional  arguing reliably kills sales  
+what to do  one trick is to try to organize 
+a large meeting so their peers do 
+
+…it’s not 
+uncommon for 
+tool improvement 
+to be viewed 
+as  bad  or at 
+least a problem  
+
+the work for you  the more people in 
+the room  the more likely there is someone 
+very smart and respected and cares 
+ about bugs and about the given code   
+can diagnose an error  to counter arguments 
+it’s a false positive   has been 
+burned by a similar error  loses his her 
+bonus for errors  or is in another group 
+ another potential sale   
+
+further  a larger results meeting 
+increases the probability that anyone 
+laid off at a later date attended it and 
+saw how your tool worked  true story  
+a networking company agreed to buy 
+the coverity product  and one week 
+later laid off 110 people  not because of 
+us   good or bad  for the fired people 
+it clearly was not a happy day  however  
+it had a surprising result for us at a 
+business level  when these people were 
+hired at other companies some suggested 
+bringing the tool in for a trial  
+resulting in four sales  
+
+what happens when you cannot fix 
+all the bugs  if you think bugs are bad 
+enough to buy a bug finding tool  you 
+will fix them  not quite  a rough heuris 
+tic is that fewer than 1 000 bugs  then 
+fix them  more  the baseline is to record 
+the current bugs  do not fix them 
+but do fix any new bugs  many compa 
+nies have independently come up with 
+this practice  which is more rational 
+than it seems  having a lot of bugs usually 
+requires a lot of code  much of it 
+will not have changed in a long time  a 
+reasonable  conservative heuristic is 
+if you have not touched code in years  
+do not modify it  even for a bug fix  to 
+avoid causing any breakage  
+
+a surprising consequence is it’s not 
+uncommon for tool improvement to be 
+viewed as  bad  or at least a problem  
+pretend you are a manager  for anything 
+bad you can measure  you want it to diminish 
+over time  this means you are 
+improving something and get a bonus  
+
+you may not understand techni 
+cal issues that well  and your boss certainly 
+does not understand them  thus  
+you want a simple graph that looks like 
+figure 1  no manager gets a bonus for 
+figure 2  representative story  at company 
+x  version 2 4 of the tool found 
+approximately 2 400 errors  and over 
+time the company fixed about 1 200 of 
+them  then it upgraded to version 3 6  
+suddenly there were 3 600 errors  the 
+manager was furious for two reasons  
+one  we  undid  all the work his people 
+
+february 2010 | vol  53 | no  2 | communications of the acm 73 
+
+
+contributed articles 
+
+figure 1  bugs down over 
+time = manager bonus  
+time 
+bad 
+had done  and two  how could we have 
+missed them the first time  
+
+how do upgrades happen when 
+more bugs is no good  companies in 
+dependently settle on a small number 
+of upgrade models  
+
+never  guarantees  improvement   
+
+never before a release  where it would 
+be most crucial   counterintuitively happens 
+most often in companies that believe 
+the tool helps with release quality 
+in that they use it to  gate  the release  
+
+never before a meeting  this is at least 
+socially rational  
+
+upgrade  then roll back  seems to happen 
+at least once at large companies  
+and 
+
+upgrade only checkers where they fix 
+most errors  common checkers include 
+use after free  memory corruption  
+ sometimes  locking  and  sometimes  
+checkers that flag code contradictions  
+
+do missed errors matter  if people 
+do not fix all the bugs  do missed errors 
+ false negatives  matter  of course not  
+they are invisible  well  not always  
+common cases  potential customers 
+intentionally introduced bugs into the 
+system  asking  why did not you find it   
+many check if you find important past 
+
+bugs  the easiest sale is to a group whose 
+code you are checking that was horribly 
+burned by a specific bug last week  and 
+you find it  if you do not find it  no mat 
+ter the hundreds of other bugs that may 
+be the next important bug  
+
+here is an open secret known to bug 
+finders  the set of bugs found by tool 
+a is rarely a superset of another tool b  
+even if a is much better than b  thus  
+the discussion gets pushed from  a is 
+better than b  to  a finds some things  
+b finds some things  and does not help 
+the case of a  
+
+adding bugs can be a problem  losing 
+already inspected bugs is always a 
+problem  even if you replace them with 
+many more new errors  while users 
+know in theory that the tool is  not a 
+verifier   it’s very different when the tool 
+demonstrates this limitation  good and 
+hard  by losing a few hundred known errors 
+after an upgrade  
+
+the easiest way to lose bugs is to add 
+just one to your tool  a bug that causes 
+false negatives is easy to miss  one such 
+bug in how our early research tool’s 
+internal representation handled array 
+references meant the analysis ignored 
+most array uses for more than nine 
+months  in our commercial product  
+blatant situations like this are prevented 
+through detailed unit testing  but un 
+covering the effect of subtle bugs is still 
+difficult because customer source code 
+is complex and not available  
+
+churn 
+
+users really want the same result from 
+run to run  even if they changed their 
+code base  even if they upgraded the tool  
+their model of error messages  compiler 
+warnings  classic determinism states  
+the same input + same function = same 
+
+time 
+bad 
+figure 2  no bonus  
+result  what users want  different input 
+ modified code base  + different function 
+ tool version  = same result  as a 
+result  we find upgrades to be a constant 
+headache  analysis changes can easily 
+cause the set of defects found to shift  
+the new speak term we use internally is 
+ churn   a big change from academia is 
+that we spend considerable time and en 
+ergy worrying about churn when modifying 
+checkers  we try to cap churn at less 
+than 5% per release  this goal means 
+large classes of analysis tricks are disallowed 
+since they cannot obviously guarantee 
+minimal effect on the bugs found  
+randomization is verboten  a tragedy 
+given that it provides simple  elegant solutions 
+to many of the exponential problems 
+we encounter  timeouts are also 
+bad and sometimes used as a last resort 
+but never encouraged  
+
+myth  more analysis is always good  
+while nondeterministic analysis might 
+cause problems  it seems that adding 
+more deterministic analysis is always 
+good  bring on path sensitivity  theorem 
+proving  sat solvers  unfortunately  no  
+
+at the most basic level  errors found 
+with little analysis are often better than 
+errors found with deeper tricks  a good 
+error is probable  a true error  easy to diagnose  
+best is difficult to misdiagnose  
+as the number of analysis steps increas 
+es  so  too  does the chance of analysis 
+mistake  user confusion  or the perceived 
+improbability of event sequence  
+no analysis equals no mistake  
+
+further  explaining errors is often 
+more difficult than finding them  a 
+misunderstood explanation means the 
+error is ignored or  worse  transmuted 
+into a false positive  the heuristic we 
+follow  whenever a checker calls a complicated 
+analysis subroutine  we have to 
+explain what that routine did to the user  
+and the user will then have to  correctly  
+manually replicate that tricky thing in 
+his her head  
+
+sophisticated analysis is not easy to 
+explain or redo manually  compound 
+ing the problem  users often lack a 
+strong grasp on how compilers work  
+a representative user quote is  ‘static’ 
+analysis’  what’s the performance overhead   
+
+
+the end result  since the analysis 
+that suppresses false positives is invisible 
+ it removes error messages rather 
+than generates them  its sophistication 
+has scaled far beyond what our research 
+
+74 communications of the acm | february 2010 | vol  53 | no  2 
+
+
+contributed articles 
+
+system did  on the other hand  the 
+commercial coverity product  despite 
+its improvements  lags behind the research 
+system in some ways because it 
+had to drop checkers or techniques that 
+demand too much sophistication on 
+the part of the user  as an example  for 
+many years we gave up on checkers that 
+flagged concurrency errors  while finding 
+such errors was not too difficult  ex 
+plaining them to many users was   the 
+prefix system also avoided reporting 
+races for similar reasons though is now 
+supported by coverity   
+
+no bug is too foolish to check for  giv 
+en enough code  developers will write 
+almost anything you can think of  fur 
+ther  completely foolish errors can be 
+some of the most serious  it’s difficult to 
+be extravagantly nonsensical in a harmless 
+way  we’ve found many errors over 
+the years  one of the absolute best was 
+the following in the x window system  
+
+if getuid    = 0 && geteuid == 0   
+
+ errorf  only root   
+
+ exit 1   
+
+  
+
+it allowed any local user to get root 
+accessd and generated enormous press 
+coverage  including a mention on fox 
+news  the web site   the checker was 
+written by scott mcpeak as a quick hack 
+to get himself familiar with the system  it 
+made it into the product not because of 
+a perceived need but because there was 
+no reason not to put it in  fortunately  
+
+false positives 
+
+false positives do matter  in our experience  
+more than 30% easily cause problems  
+people ignore the tool  true bugs 
+get lost in the false  a vicious cycle starts 
+where low trust causes complex bugs 
+to be labeled false positives  leading to 
+yet lower trust  we have seen this cycle 
+triggered even for true errors  if people 
+do not understand an error  they label it 
+false  and done once  induction makes 
+the  n+1 th time easier  we initially 
+thought false positives could be eliminated 
+through technology  because of 
+this dynamic we no longer think so  
+
+we’ve spent considerable technical 
+
+d the tautological check geteuid == 0 was in 
+tended to be geteuid   == 0  in its current 
+form itcompares the address of geteuid to 0  giventhatthe 
+function exists  its address is never 0  
+
+effort to achieve low false positive rates 
+in our static analysis product  we aim 
+for below 20% for  stable  checkers  
+when forced to choose between more 
+bugs or fewer false positives we typically 
+choose the latter  
+
+talking about  false positive rate  is 
+simplistic since false positives are not 
+all equal  the initial reports matter in 
+ordinately  if the first nreports are false 
+positives  n= 3    people tend to utter 
+variants on  this tool sucks   further 
+more  you never want an embarrassing 
+false positive  a stupid false positive 
+implies the tool is stupid    it’s not 
+even smart enough to figure that out    
+this technical mistake can cause social 
+problems  an expensive tool needs 
+someone with power within a company 
+or organization to champion it  such 
+people often have at least one enemy  
+you do not want to provide ammunition 
+that would embarrass the tool champion 
+internally  a false positive that fits in 
+a punchline is really bad  
+
+conclusion 
+
+while we’ve focused on some of the 
+less pleasant experiences in the commercialization 
+of bug finding products  
+two positive experiences trump 
+them all  first  selling a static tool has 
+become dramatically easier in recent 
+years  there has been a seismic shift in 
+terms of the average programmer  getting 
+it   when you say you have a static 
+bug finding tool  the response is no longer 
+ huh   or  lint  yuck   this shift 
+seems due to static bug finders being in 
+wider use  giving rise to nice networking 
+effects  the person you talk to likely 
+knows someone using such a tool  has a 
+competitor that uses it  or has been in a 
+company that used it  
+
+moreover  while seemingly vacuous 
+tautologies have had a negative effect 
+on technical development  a nice bal 
+ancing empirical tautology holds that 
+bug finding is worthwhile for anyone 
+with an effective tool  if you can find 
+code  and the checked system is big 
+enough  and you can compile  enough 
+of  it  then you will always find serious 
+errors  this appears to be a law  we encourage 
+readers to exploit it  
+
+acknowledgments 
+
+we thank paul twohey  cristian cadar  
+and especially philip guo for their helpful  
+last minute proofreading  the ex 
+
+perience covered here was the work of 
+many  we thank all who helped build the 
+tool and company to its current state  
+especially the sales engineers  support 
+engineers  and services engineers who 
+took the product into complex environ 
+ments and were often the first to bear 
+the brunt of problems  without them 
+there would be no company to document  
+we especially thank all the customers 
+who tolerated the tool during 
+its transition from research quality to 
+production quality and the numerous 
+champions whose insightful feedback 
+helped us focus on what mattered  
+
+
+references 
+
+1  ball  t  and rajamani  s k  automatically validating 
+temporal safety properties of interfaces  in 
+proceedings of the eighth international spin 
+
+workshop on model checking of software  toronto  
+
+ontario  canada   m  dwyer  ed  springer verlag  new 
+
+york  2001  103–122  
+
+2  bush  w   pincus  j   and sielaff  d  a static analyzer 
+for finding dynamic programming errors  software  
+practice and experience 30  7  june 2000   775–802  
+3  coverity static analysis  http   www coverity com 
+4  das  m   lerner  s   and seigle  m  esp  path 
+sensitive program verification in polynomial 
+time  in proceedings of the acm sigplan 2002 
+conference on programming language design and 
+implementation  berlin  germany  june 17–19   acm 
+press  new york  2002  57–68  
+5  edison design group  edg c compiler front end  
+http   www edg com 
+6  engler  d   chelf  b   chou  a   and hallem  s  checking 
+system rules using system specific  programmer 
+written compiler extensions  in proceedings of the 
+fourth conference on operating system design & 
+implementation  san diego  oct  22–25   usenix 
+association  berkeley  ca  2000  1–1  
+7  flanagan  c   leino  k m   lillibridge  m   nelson  g   
+saxe  j b   and stata  r  extended static checking 
+for java  in proceedings of the acm sigplan 
+conference on programming language design and 
+implementation  berlin  germany  june 17–19   acm 
+press  new york  2002  234–245  
+8  foster  j s   terauchi  t   and aiken  a  flow sensitive 
+type qualifiers  in proceedings of the acm sigplan 
+2002 conference on programming language design 
+and implementation  berlin  germany  june 17–19   
+acm press  new york  2002  1–12  
+9  hallem  s   chelf  b   xie  y   and engler  d  a system 
+and language for building system specific  static 
+analyses  in proceedings of the acm sigplan 
+conference on programming language design and 
+implementation  berlin  germany  june 17–19   acm 
+press  new york  2002  69–82  
+10 hastings  r  and joyce  b  purify  fast detection of memory 
+leaks and access errors  in proceedings of the winter 
+1992 usenix conference  berkeley  ca  jan  20–24   
+usenix association  berkeley  ca  1992  125–138  
+11  xie  y  and aiken  a  context  and path sensitive 
+memory leak detection  in proceedings of the 10th 
+european software engineering conference held 
+jointly with 13th acm sigsoft international 
+symposium on foundations of software engineering 
+ lisbon  portugal  sept  5–9   acm press  new york  
+
+2005  115–125  
+
+al bessey  ken block  ben chelf  andy chou  
+bryan fulton  seth hallem  charles henri gros  
+asya kamsky  and scott mcpeak are current or former 
+employees of coverity  inc   a software company based 
+in san francisco  ca   http   www coverity com 
+
+dawson engler  engler@stanford edu  is an associate 
+professor in the department of computer science and 
+electrical engineering at stanford university  stanford  ca  
+and technical advisor to coverity  inc   san francisco  ca  
+
+© 2010 acm 0001 0782 10 0200 $10 00 
+
+february 2010 | vol  53 | no  2 | communications of the acm 75 
+
+
+
+
