@@ -1,0 +1,508 @@
+contributed articles 
+
+Doi:10.1145/1646353.1646374 
+
+How Coverity built a bug-finding tool, and 
+a business, around the unlimited supply 
+of bugs in software systems. 
+
+BY AL BesseY, Ken BLocK, Ben cheLf, AnDY chou, 
+BRYAn fuLton, seth hALLem, chARLes henRi-GRos, 
+AsYA KAmsKY, scott mcPeAK, AnD DAWson enGLeR 
+
+A few Billion 
+Lines of 
+code Later 
+
+using static Analysis 
+to find Bugs in 
+the Real World 
+
+In 2002, COVErITY commercialized3 a research static 
+bug-finding tool.6,9 Not surprisingly, as academics, 
+our view of commercial realities was not perfectly 
+accurate. However, the problems we encountered 
+were not the obvious ones. Discussions with tool 
+researchers and system builders suggest we were 
+not alone in our naïveté. Here, we document some 
+of the more important examples of what we learned 
+developing and commercializing an industrialstrength 
+bug-finding tool. 
+
+We built our tool to find generic errors (such as 
+memory corruption and data races) and systemspecific 
+or interface-specific violations (such as 
+violations of function-ordering constraints). The tool, 
+
+like all static bug finders, leveraged 
+the fact that programming rules often 
+map clearly to source code; thus static 
+inspection can find many of their violations. 
+For example, to check the rule 
+“acquired locks must be released,” a 
+checker would look for relevant operations 
+(such as lock() and unlock()) 
+and inspect the code path after flagging 
+rule disobedience (such as lock()with 
+no unlock() and double locking). 
+
+For those who keep track of such 
+things, checkers in the research system 
+typically traverse program paths (flow-
+sensitive) in a forward direction, going 
+across function calls (inter-procedural) 
+while keeping track of call-site-specific 
+information (context-sensitive) and 
+toward the end of the effort had some 
+of the support needed to detect when a 
+path was infeasible (path-sensitive). 
+
+A glance through the literature reveals 
+many ways to go about static bug 
+
+finding.1,2,4,7,8,11
+
+ For us, the central religion 
+was results: If it worked, it was 
+good, and if not, not. The ideal: check 
+millions of lines of code with little 
+manual setup and find the maximum 
+number of serious true errors with the 
+minimum number of false reports. As 
+much as possible, we avoided using annotations 
+or specifications to reduce 
+manual labor. 
+
+Like the PREfix product,2 we were 
+also unsound. Our product did not verify 
+the absence of errors but rather tried 
+to find as many of them as possible. Un-
+soundness let us focus on handling the 
+easiest cases first, scaling up as it proved 
+useful. We could ignore code constructs 
+that led to high rates of false-error messages 
+(false positives) or analysis complexity, 
+in the extreme skipping problematic 
+code entirely (such as assembly 
+statements, functions, or even entire 
+files). Circa 2000, unsoundness was 
+controversial in the research community, 
+though it has since become almost a 
+de facto tool bias for commercial products 
+and many research projects. 
+
+Initially, publishing was the main 
+force driving tool development. We 
+would generally devise a set of checkers 
+or analysis tricks, run them over a few 
+
+66 communicAtions of the Acm | FeBrUAry 2010 | vOl. 53 | nO. 2 
+
+
+“coDEProFiLES” by W. braDForD PaLEy, httP://DiDi.coM 
+
+million lines of code (typically Linux), 
+count the bugs, and write everything 
+up. Like other early static-tool research-
+ers, we benefited from what seems an 
+empirical law: Assuming you have a reasonable 
+tool, if you run it over a large, 
+previously unchecked system, you 
+will always find bugs. If you don’t, the 
+immediate knee-jerk reaction is that 
+something must be wrong. Misconfigu-
+ration? Mistake with macros? Wrong 
+compilation target? If programmers 
+must obey a rule hundreds of times, 
+then without an automatic safety net 
+they cannot avoid mistakes. Thus, even 
+our initial effort with primitive analysis 
+found hundreds of errors. 
+
+This is the research context. We now 
+describe the commercial context. Our 
+rough view of the technical challenges of 
+commercialization was that given that 
+the tool would regularly handle “large 
+amounts” of “real” code, we needed 
+only a pretty box; the rest was a business 
+issue. This view was naïve. While we in-
+clude many examples of unexpected obstacles 
+here, they devolve mainly from 
+consequences of two main dynamics: 
+
+First, in the research lab a few people 
+check a few code bases; in reality 
+many check many. The problems that 
+show up when thousands of program-
+mers use a tool to check hundreds (or 
+even thousands) of code bases do not 
+show up when you and your co-authors 
+check only a few. The result of summing 
+many independent random variables? 
+A Gaussian distribution, most 
+of it not on the points you saw and 
+adapted to in the lab. Furthermore, 
+Gaussian distributions have tails. As 
+the number of samples grows, so, too, 
+does the absolute number of points 
+several standard deviations from the 
+mean. The unusual starts to occur with 
+increasing frequency. 
+
+W. Bradford Paley’s codeProfiles was 
+originally commissioned for the Whitney 
+museum of American Art’s “coDeDoc” 
+exhibition and later included in momA’s 
+“Design and the elastic mind” exhibition. 
+codeProfiles explores the space of code 
+itself; the program reads its source into 
+memory, traces three points as they once 
+moved through that space, then prints itself 
+on the page. 
+
+68 communicAtions of the Acm | FeBrUAry 2010 | vOl. 53 | nO. 2 
+contributed articles 
+For code, these features include 
+problematic idioms, the types of false 
+positives encountered, the distance 
+of a dialect from a language standard, 
+and the way the build works. For developers, 
+variations appear in raw ability, 
+knowledge, the amount they care 
+about bugs, false positives, and the 
+types of both. A given company won’t 
+deviate in all these features but, given 
+the number of features to choose from, 
+often includes at least one weird oddity. 
+Weird is not good. Tools want expected. 
+Expected you can tune a tool to 
+handle; surprise interacts badly with 
+tuning assumptions. 
+Second, in the lab the user’s values, 
+knowledge, and incentives are those 
+Such champions make sales as easily as 
+their antithesis blocks them. However, 
+since their main requirements tend to 
+be technical (the tool must work) the 
+reader likely sees how to make them 
+happy, so we rarely discuss them here. 
+Most of our lessons come from two 
+different styles of use: the initial trial of 
+the tool and how the company uses the 
+tool after buying it. The trial is a pre-sale 
+demonstration that attempts to show 
+that the tool works well on a potential 
+customer’s code. We generally ship a 
+salesperson and an engineer to the customer’s 
+site. The engineer configures 
+the tool and runs it over a given code 
+base and presents results soon after. Initially, 
+the checking run would happen 
+of the tool builder, since the user and 
+the builder are the same person. Deployment 
+leads to severe fission; users 
+often have little understanding of 
+the tool and little interest in helping 
+develop it (for reasons ranging from 
+simple skepticism to perverse reward 
+incentives) and typically label any error 
+message they find confusing as false. A 
+tool that works well under these constraints 
+looks very different from one 
+tool builders design for themselves. 
+However, for every user who lacks 
+the understanding or motivation one 
+might hope for, another is eager to understand 
+how it all works (or perhaps already 
+does), willing to help even beyond 
+what one might consider reasonable. 
+
+contributed articles 
+
+in the morning, and the results meeting 
+would follow in the afternoon; as code 
+size at trials grows it’s not uncommon 
+to split them across two (or more) days. 
+
+Sending people to a trial dramatically 
+raises the incremental cost of each 
+sale. However, it gives the non-trivial 
+benefit of letting us educate customers 
+(so they do not label serious, true bugs 
+
+
+as false positives) and do real-time, ad 
+hoc workarounds of weird customer 
+system setups. 
+
+The trial structure is a harsh test for 
+any tool, and there is little time. The 
+checked system is large (millions of 
+lines of code, with 20–30MLOC a possibility). 
+The code and its build system 
+are both difficult to understand. How
+
+
+ever, the tool must routinely go from 
+never seeing the system previously to 
+getting good bugs in a few hours. Since 
+we present results almost immediately 
+after the checking run, the bugs must 
+be good with few false positives; there 
+is no time to cherry pick them. 
+
+Furthermore, the error messages 
+must be clear enough that the sales en-
+gineer (who didn’t build the checked 
+system or the tool) can diagnose and 
+explain them in real time in response 
+to “What about this one?” questions. 
+
+The most common usage model for 
+the product has companies run it as 
+part of their nightly build. Thus, most 
+require that checking runs complete in 
+12 hours, though those with larger code 
+bases (10+MLOC) grudgingly accept 
+24 hours. A tool that cannot analyze 
+at least 1,400 lines of code per minute 
+makes it difficult to meet these targets. 
+During a checking run, error messages 
+are put in a database for subsequent 
+triaging, where users label them as 
+true errors or false positives. We spend 
+significant effort designing the system 
+so these labels are automatically reapplied 
+if the error message they refer to 
+comes up on subsequent runs, despite 
+code-dilating edits or analysis-changing 
+bug-fixes to checkers. 
+
+As of this writing (December 2009), 
+approximately 700 customers have 
+licensed the Coverity Static Analysis 
+product, with somewhat more than a 
+billion lines of code among them. We 
+estimate that since its creation the tool 
+has analyzed several billion lines of 
+code, some more difficult than others. 
+
+Caveats. Drawing lessons from a single 
+data point has obvious problems. 
+Our product’s requirements roughly 
+form a “least common denominator” 
+set needed by any tool that uses non-
+trivial analysis to check large amounts 
+of code across many organizations; the 
+tool must find and parse the code, and 
+users must be able to understand error 
+messages. Further, there are many 
+ways to handle the problems we have 
+encountered, and our way may not be 
+the best one. We discuss our methods 
+more for specificity than as a claim of 
+solution. 
+
+Finally, while we have had success 
+as a static-tools company, these are 
+small steps. We are tiny compared to 
+mature technology companies. Here, 
+too, we have tried to limit our discus
+
+
+sion to conditions likely to be true in a 
+larger setting. 
+
+Laws of Bug finding 
+
+The fundamental law of bug finding 
+is No Check = No Bug. If the tool can’t 
+check a system, file, code path, or given 
+property, then it won’t find bugs in it. 
+Assuming a reasonable tool, the first 
+order bound on bug counts is just how 
+much code can be shoved through the 
+tool. Ten times more code is 10 times 
+more bugs. 
+
+We imagined this law was as simple 
+a statement of fact as we needed. Un-
+fortunately, two seemingly vacuous cor-
+ollaries place harsh first-order bounds 
+on bug counts: 
+
+Law: You can’t check code you don’t 
+see. It seems too trite to note that checking 
+code requires first finding it... until 
+you try to do so consistently on many 
+large code bases. Probably the most reliable 
+way to check a system is to grab its 
+code during the build process; the build 
+system knows exactly which files are in-
+cluded in the system and how to compile 
+them. This seems like a simple task. 
+Unfortunately, it’s often difficult to un-
+derstand what an ad hoc, homegrown 
+build system is doing well enough to ex-
+tract this information, a difficulty compounded 
+by the near-universal absolute 
+edict: “No, you can’t touch that.” By de-
+fault, companies refuse to let an external 
+force modify anything; you cannot 
+modify their compiler path, their broken 
+makefiles (if they have any), or in any 
+way write or reconfigure anything other 
+than your own temporary files. Which is 
+fine, since if you need to modify it, you 
+most likely won’t understand it. 
+
+Further, for isolation, companies 
+often insist on setting up a test machine 
+for you to use. As a result, not 
+infrequently the build you are given to 
+check does not work in the first place, 
+which you would get blamed for if you 
+had touched anything. 
+
+Our approach in the initial months 
+of commercialization in 2002 was a 
+low-tech, read-only replay of the build 
+commands: run make, record its output 
+in a file, and rewrite the invocations 
+to their compiler (such as gcc) 
+to instead call our checking tool, then 
+rerun everything. Easy and simple. 
+This approach worked perfectly in the 
+lab and for a small number of our earliest 
+customers. We then had the fol
+
+
+“coDEProFiLES” by W. braDForD PaLEy 
+
+FeBrUAry 2010 | vOl. 53 | nO. 2 | communicAtions of the Acm 69 
+
+
+contributed articles 
+
+lowing conversation with a potential 
+
+customer: 
+“How do we run your tool?” 
+“Just type ‘make’ and we’ll rewrite 
+
+its output.” 
+“What’s ‘make’? We use ClearCase.” 
+“Uh, What’s ClearCase?” 
+This turned out to be a chasm we 
+
+couldn’t cross. (Strictly speaking, the 
+customer used ‘ClearMake,’ but the 
+superficial similarities in name are en-
+tirely unhelpful at the technical level.) 
+We skipped that company and went 
+to a few others. They exposed other 
+problems with our method, which we 
+papered over with 90% hacks. None 
+seemed so troublesome as to force us 
+to rethink the approach—at least until 
+we got the following support call from 
+a large customer: 
+
+“Why is it when I run your tool, I 
+
+have to reinstall my Linux distribution 
+
+from CD?” 
+
+This was indeed a puzzling question. 
+Some poking around exposed the 
+following chain of events: the company’s 
+makeused a novel format to print 
+out the absolute path of the directory 
+in which the compiler ran; our script 
+misparsed this path, producing the 
+empty string that we gave as the destination 
+to the Unix “cd” (change direc-
+tory) command, causing it to change 
+to the top level of the system; it ran 
+“rm -rf *” (recursive delete) during 
+compilation to clean up temporary 
+files; and the build process ran as root. 
+Summing these points produces the 
+removal of all files on the system. 
+
+The right approach, which we have 
+used for the past seven years, kicks off 
+the build process and intercepts every 
+system call it invokes. As a result, we can 
+see everything needed for checking, in-
+cluding the exact executables invoked, 
+their command lines, the directory 
+they run in, and the version of the compiler 
+(needed for compiler-bug workarounds). 
+This control makes it easy to 
+grab and precisely check all source code, 
+to the extent of automatically changing 
+the language dialect on a per-file basis. 
+
+To invoke our tool users need only 
+
+call it with their build command as an 
+
+argument: 
+
+cov-build <build command> 
+
+We thought this approach was bulletproof. 
+Unfortunately, as the astute read-
+
+A misunderstood 
+explanation 
+means the error is 
+ignored or, worse, 
+transmuted into 
+a false positive. 
+
+er has noted, it requires a command 
+prompt. Soon after implementing it we 
+went to a large company, so large it had 
+a hyperspecialized build engineer, who 
+engaged in the following dialogue: 
+
+“How do I run your tool?” 
+
+“Oh, it’s easy. Just type ‘cov-build’ 
+before your build command.” 
+
+“Build command? I just push this 
+[GUI] button...” 
+
+Social vs. technical. The social restriction 
+that you cannot change anything, 
+no matter how broken it may be, forces 
+ugly workarounds. A representative ex-
+ample is: Build interposition on Windows 
+requires running the compiler in 
+the debugger. Unfortunately, doing so 
+causes a very popular windows C++ compiler—
+Visual Studio C++ .NET 2003—to 
+prematurely exit with a bizarre error 
+message. After some high-stress fussing, 
+it turns out that the compiler has a 
+use-after-free bug, hit when code used a 
+Microsoft-specific C language extension 
+(certain invocations of its #using directive). 
+The compiler runs fine in normal 
+use; when it reads the freed memory, 
+the original contents are still there, so 
+everything works. However, when run 
+with the debugger, the compiler switch-
+es to using a “debug malloc,” which on 
+each free call sets the freed memory 
+contents to a garbage value. The subsequent 
+read returns this value, and the 
+compiler blows up with a fatal error. 
+The sufficiently perverse reader can no 
+doubt guess the “solution.”a 
+
